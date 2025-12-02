@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual env
+venv/
+
+# VS Code
+.vscode/
+
+# Secrets
+.env
+*.pem
+*.key
+*.crt
+
+# Nginx certs
+nginx/certs/server.key
+nginx/certs/server.crt
+

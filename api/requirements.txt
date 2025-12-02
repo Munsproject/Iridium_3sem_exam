@@ -1,0 +1,7 @@
+Flask
+Flask-SQLAlchemy
+SQLAlchemy
+PyMySQL
+Flask-Migrate
+alembic
+
