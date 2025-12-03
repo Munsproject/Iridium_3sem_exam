@@ -15,13 +15,20 @@ services:
       - mariadb_data:/var/lib/mysql
 
   api:
-    build: .
+    build: ./api
     container_name: iridium_api
     restart: always
     depends_on:
       - mariadb
-    ports:
-      - "5000:5000"
+    environment:
+      DB_HOST: mariadb
+      DB_NAME: ${MYSQL_DATABASE}
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+    expose:
+      - "5000"
+    volumes:
+      - ./nginx/certs:/etc/ssl/certs:ro
     
   nginx:
     image: nginx:latest
@@ -44,6 +51,8 @@ services:
       - mariadb
     ports:
       - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
     volumes:
       - grafana_data:/var/lib/grafana
 
