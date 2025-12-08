@@ -22,3 +22,4 @@ def test_build_message_contains_all_fields():
     assert msg["msg"] == "periodic update"
     assert msg["transport"] == "tcp"
     assert "timestamp" in msg
+    

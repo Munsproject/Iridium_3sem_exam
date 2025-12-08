@@ -16,6 +16,7 @@ def test_missing_lat_lon(client):
         "msg": "test"
     }
     resp = client.post("/messages", json=payload)
+
     assert resp.status_code == 400
 
 
@@ -29,4 +30,5 @@ def test_invalid_transport(client):
         "transport": "WRONG"
     }
     resp = client.post("/messages", json=payload)
+    
     assert resp.status_code == 400
