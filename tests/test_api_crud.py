@@ -1,45 +1,36 @@
-import requests
-
-# TODO: Skift til http://localhost:5000 hvis du vil ramme Flask direkte
-BASE_URL = "https://localhost"
-
-
-def test_create_message_sos():
-    """CREATE: Opret en SOS-besked via API'et."""
+def test_create_message_sos(client):
     payload = {
+        "device_id": "TEST123",
         "msg_type": "SOS",
+        "lat": 55.000001,
+        "lon": 12.000001,
+        "msg": "SOS triggered",
+        "transport": "tcp"
+    }
+
+    resp = client.post("/messages", json=payload)
+    assert resp.status_code == 201
+
+    data = resp.get_json()
+    assert "id" in data
+    msg_id = data["id"]
+
+    # Hent den oprettede besked via GET ALL
+    resp2 = client.get("/api/messages")
+    assert resp2.status_code == 200
+
+    rows = resp2.get_json()
+    assert any(m["id"] == msg_id for m in rows)
+
+
+def test_create_invalid_msg_type(client):
+    payload = {
+        "device_id": "TEST123",
+        "msg_type": "INVALID",
         "lat": 55.0,
         "lon": 12.0,
+        "msg": "bad msg"
     }
-    resp = requests.post(f"{BASE_URL}/messages", json=payload, verify=False)
-    assert resp.status_code in (200, 201)
 
-    data = resp.json()
-    assert data["msg_type"] == "SOS"
-    assert "id" in data
-
-    # Gem id globalt til næste test (pytest kører normalt nyt process, så dette er mest demo)
-    global CREATED_ID
-    CREATED_ID = data["id"]
-
-
-def test_read_message_by_id():
-    """READ: Læs besked tilbage pr. id."""
-    resp = requests.get(f"{BASE_URL}/messages/{CREATED_ID}", verify=False)
-    assert resp.status_code == 200
-
-    data = resp.json()
-    assert data["id"] == CREATED_ID
-    assert data["msg_type"] == "SOS"
-
-
-def test_list_messages():
-    """READ: Liste alle beskeder og sikre at den oprettede findes."""
-    resp = requests.get(f"{BASE_URL}/messages", verify=False)
-    assert resp.status_code == 200
-
-    data = resp.json()
-    assert isinstance(data, list)
-
-    ids = [m["id"] for m in data]
-    assert CREATED_ID in ids
+    resp = client.post("/messages", json=payload)
+    assert resp.status_code == 400

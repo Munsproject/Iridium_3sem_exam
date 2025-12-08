@@ -1,41 +1,24 @@
-import requests
+def test_flow_sos_creates_alert_and_device_update(client):
+    lat = 55.123456
+    lon = 12.654321
 
-# TODO: Tilpas imports til din GPS- og klientkode
-from client.gps_mock import Gps_mock
-from client.api_client import send_sos  # funktion der sender SOS til API'et
+    payload = {
+        "device_id": "SOS_DEV",
+        "msg_type": "SOS",
+        "lat": lat,
+        "lon": lon,
+        "msg": "SOS emergency",
+        "transport": "tcp"
+    }
 
-# TODO: Skift til http hvis nødvendigt
-BASE_URL = "https://localhost"
+    resp = client.post("/messages", json=payload)
+    assert resp.status_code == 201
 
+    resp2 = client.get("/api/messages")
+    rows = resp2.get_json()
 
-def test_flow_sos_freezes_last_position():
-    """
-    Scenarie: enheden bevæger sig, SOS udløses, og sidste position sendes.
-    Vi checker, at SOS-beskeden i DB matcher sidste koord fra GPS'en.
-    """
-    gps = Gps_mock()
+    sos_msg = next(m for m in rows if m["msg_type"] == "SOS")
 
-    # Første position (before movement)
-    gps.get_position()
-    # Anden position: den vil vi bruge til SOS
-    lat2, lon2 = gps.get_position()
-    lat2r, lon2r = round(lat2, 6), round(lon2, 6)
+    assert float(sos_msg["lat"]) == lat
+    assert float(sos_msg["lon"]) == lon
 
-    # Udløs SOS fra klienten
-    send_sos(lat2, lon2)
-
-    # Hent SOS-beskeder fra API
-    resp = requests.get(f"{BASE_URL}/messages?msg_type=SOS", verify=False)
-    assert resp.status_code == 200
-    data = resp.json()
-    assert len(data) > 0
-
-    # Antag sidste SOS er den nyeste
-    data_sorted = sorted(data, key=lambda m: m.get("timestamp", ""))
-    last_sos = data_sorted[-1]
-
-    sos_lat = round(float(last_sos["lat"]), 6)
-    sos_lon = round(float(last_sos["lon"]), 6)
-
-    assert sos_lat == lat2r
-    assert sos_lon == lon2r

@@ -1,21 +1,22 @@
+import os
 import pytest
-
-# Denne antager at du har 'app = Flask(__name__)' i api/app.py
-from api.app import app as flask_app
-
+from app import app, db
 
 @pytest.fixture
-def app():
-    """Konfigurer Flask app til test-mode."""
-    flask_app.config.update(
-        {
-            "TESTING": True
-        }
-    )
-    yield flask_app
+def client():
+    app.config["TESTING"] = True
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("TEST_DB_URI")
+    app.config["WTF_CSRF_ENABLED"] = False
 
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
 
-@pytest.fixture
-def client(app):
-    """Flask test-klient fixture."""
-    return app.test_client()
+    with app.test_client() as client:
+        yield client
+
+    # Efter test
+    with app.app_context():
+        db.session.remove()
+        db.drop_all()
+
