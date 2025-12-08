@@ -1,9 +1,11 @@
 import os
+import uuid
+from datetime import datetime
+from enum import Enum
 from flask import Flask, request, jsonify 
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate 
-import uuid
-from datetime import datetime
+
 
 app = Flask(__name__)
 
@@ -21,14 +23,93 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+with app.app_context():
+    db.create_all()
+
+class MsgType(str, Enum):
+    NORMAL = "NORMAL"
+    SOS = "SOS"
+    LKP = "LKP"
+
+class Transport(str, Enum):
+    TCP = "tcp"
+    SATELLITE_MOCK = "satellite_mock"
+
 class Message(db.Model):
     __tablename__ = 'messages'
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    msg_type = db.Column(db.String(20), nullable=False, default="NORMAL")
+
+    id = db.Column(
+        db.String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4())
+    )
+    device_id = db.Column(db.String(36), nullable=False)
+    msg_type = db.Column(db.Enum(MsgType), nullable=False, default=MsgType.NORMAL)
     lat = db.Column(db.Numeric(9,6), nullable=False)
     lon = db.Column(db.Numeric(9,6), nullable=False)
     msg = db.Column(db.String(255), nullable=False)
-    timestamp = db.Column(db.String(50), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    transport = db.Column(db.Enum(Transport), nullable=False, default=Transport.TCP)
+
+class Device(db.Model):
+    __tablename__ = "devices"
+
+    id = db.Column(db.String(36), primary_key=True)
+    last_lat = db.Column(db.Numeric(9, 6))
+    last_lon = db.Column(db.Numeric(9, 6))
+    last_msg_type = db.Column(db.Enum(MsgType))
+    last_seen = db.Column(db.DateTime)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+class Alert(db.Model):
+    __tablename__ = "alerts"
+
+    id = db.Column(
+        db.String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4())
+    )
+
+    device_id = db.Column(db.String(36), nullable=False)
+    msg_id = db.Column(db.String(36), nullable=False)
+
+    alert_type = db.Column(db.Enum(MsgType), nullable=False)
+    severity = db.Column(db.String(20), nullable=False, default="CRITICAL")
+
+    message = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    resolved = db.Column(db.Boolean, default=False, nullable=False)
+
+def upsert_device_from_message(message: Message) -> None:
+    """Opret eller opdater Device baseret på en ny besked."""
+    device = Device.query.filter_by(id=message.device_id).first()
+
+    if device is None:
+        device = Device(
+            id=message.device_id,
+        )
+        db.session.add(device)
+
+    device.last_lat = message.lat
+    device.last_lon = message.lon
+    device.last_msg_type = message.msg_type
+    device.last_seen = message.timestamp
+
+
+def create_alert_for_message(message: Message) -> None:
+    """Opret alert for SOS-beskeder. LKP/NORMAL giver ingen alert."""
+    if message.msg_type != MsgType.SOS:
+        return  # kun SOS er en kritisk alarm
+
+    alert = Alert(
+        device_id=message.device_id,
+        msg_id=message.id,
+        alert_type=message.msg_type,  # SOS
+        message=message.msg,
+        severity="CRITICAL",
+    )
+    db.session.add(alert)
 
 # API running check
 @app.route("/")
@@ -41,48 +122,54 @@ def health_check():
     return jsonify({"status": "ok"}), 200
 
 # POST: Modtag data fra Iridium-serveren
-@app.route("/api/messages", methods=["POST"])
-def receive_message():
+@app.route("/messages", methods=["POST"])
+def create_message():
+    data = request.get_json(force=True)
+
+    device_id = data.get("device_id")
+    if not device_id:
+        return jsonify({"error": "device_id is required"}), 400
+
+    # msg_type: NORMAL, SOS, LKP
+    raw_msg_type = data.get("msg_type", "NORMAL")
     try:
-        data = request.get_json()
+        msg_type = MsgType(raw_msg_type)
+    except ValueError:
+        return jsonify({"error": f"invalid msg_type '{raw_msg_type}'"}), 400
 
-        if not data:
-            return jsonify({"error": "Missing JSON body"}), 400
+    msg_text = data.get("msg", "")
 
-        # Krævede felter
-        required = ["lat", "lon", "msg", "timestamp"]
-        for field in required:
-            if field not in data:
-                return jsonify({"error": f"Missing field '{field}'"}), 400
+    lat = data.get("lat")
+    lon = data.get("lon")
+    if lat is None or lon is None:
+        return jsonify({"error": "lat and lon are required"}), 400
 
-        # Valider data
-        try:
-            lat = float(data["lat"])
-            lon = float(data["lon"])
-            timestamp = datetime.fromisoformat(data["timestamp"].replace("Z", "+00:00"))
-        except ValueError:
-            return jsonify({"error": "Invalid data format"}), 400
-        
-        msg_type = data.get("msg_type", "NORMAL")
+    raw_transport = data.get("transport", "tcp")
+    try:
+        transport = Transport(raw_transport)
+    except ValueError:
+        return jsonify({"error": f"invalid transport '{raw_transport}'"}), 400
 
-        msg_id = str(uuid.uuid4())
-        new_message = Message(
-            id=msg_id,
-            lat=lat,
-            lon=lon,
-            msg=data["msg"],
-            timestamp=timestamp.isoformat(),
-            msg_type=msg_type,
-            )
-        db.session.add(new_message)
-        db.session.commit()
+    # opret besked
+    message = Message(
+        device_id=device_id,
+        msg_type=msg_type,
+        lat=lat,
+        lon=lon,
+        msg=msg_text,
+        transport=transport,
+    )
 
-        print(f"[INFO] New message stored: {msg_id} ({msg_type})")
-        return jsonify({"status": "stored", "id": msg_id}), 201
+    db.session.add(message)
+    db.session.flush()  # giver message.id uden commit endnu
 
-    except Exception as e:
-        print(f"[ERROR] {e}")
-        return jsonify({"error": "Internal server error"}), 500
+    # opdater Device og lav evt. SOS-alert
+    upsert_device_from_message(message)
+    create_alert_for_message(message)
+
+    db.session.commit()
+
+    return jsonify({"id": message.id}), 201
 
 # GET: Hent alle beskeder
 @app.route("/api/messages", methods=["GET"])
