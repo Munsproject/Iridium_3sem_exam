@@ -1,21 +1,18 @@
 import os
+os.environ["TESTING"] = "1"
+
 import pytest
-from api.app import app, db   # <- korrekt til din struktur
+from api.app import app, db
+
 
 @pytest.fixture
 def client():
-    # Test mode aktiveret
+    # Aktiver Flask test-mode
     app.config["TESTING"] = True
-
-    # Test database
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
-        "TEST_DB_URI",
-        "mysql+pymysql://flask:iri123@localhost/iridium_test"
-    )
-
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
     app.config["WTF_CSRF_ENABLED"] = False
 
-    # Reset DB før hver test
+    # Opbyg frisk database før test
     with app.app_context():
         db.drop_all()
         db.create_all()
@@ -24,9 +21,8 @@ def client():
     with app.test_client() as client:
         yield client
 
-    # Ryd DB efter test
+    # Rydning efter test
     with app.app_context():
         db.session.remove()
         db.drop_all()
-
 

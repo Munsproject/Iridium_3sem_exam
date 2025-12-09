@@ -9,22 +9,23 @@ from flask_migrate import Migrate
 
 app = Flask(__name__)
 
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST")
-DB_NAME = os.getenv("DB_NAME")
+if app.config.get("TESTING"):
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+else:
+    DB_USER = os.getenv("DB_USER")
+    DB_PASSWORD = os.getenv("DB_PASSWORD")
+    DB_HOST = os.getenv("DB_HOST")
+    DB_NAME = os.getenv("DB_NAME")
 
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
-)
+    app.config["SQLALCHEMY_DATABASE_URI"] = (
+        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+    )
+
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-
-with app.app_context():
-    db.create_all()
+migrate = Migrate(app, db)        
 
 class MsgType(str, Enum):
     NORMAL = "NORMAL"
@@ -178,7 +179,7 @@ def get_all_messages():
     data = [
         {
             "id": m.id,
-            "msg_type": m.msg_type,
+            "msg_type": m.msg_type.value,
             "lat": m.lat,
             "lon": m.lon,
             "msg": m.msg,
@@ -190,4 +191,6 @@ def get_all_messages():
 
 # MAIN
 if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
     app.run(host="0.0.0.0", port=5000, debug=True)
