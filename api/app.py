@@ -9,7 +9,8 @@ from flask_migrate import Migrate
 
 app = Flask(__name__)
 
-if app.config.get("TESTING"):
+if os.getenv("TESTING") == "1":
+    # Brug SQLite når tests kører
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
 else:
     DB_USER = os.getenv("DB_USER")
@@ -20,6 +21,7 @@ else:
     app.config["SQLALCHEMY_DATABASE_URI"] = (
         f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
     )
+
 
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -138,7 +140,10 @@ def create_message():
     except ValueError:
         return jsonify({"error": f"invalid msg_type '{raw_msg_type}'"}), 400
 
-    msg_text = data.get("msg", "")
+    msg_text = data.get("msg")
+    if not msg_text:
+        return jsonify({"error": "msg is required"}), 400
+
 
     lat = data.get("lat")
     lon = data.get("lon")
