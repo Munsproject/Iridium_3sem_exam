@@ -1,6 +1,6 @@
-def test_invalid_missing_msg(client):
+def test_invalid_no_msg(client):
     payload = {
-        "device_id": "D1",
+        "device_id": "D01",
         "msg_type": "LKP",
         "lat": 55,
         "lon": 12

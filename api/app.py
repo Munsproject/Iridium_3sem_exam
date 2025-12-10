@@ -29,7 +29,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)        
 
-class MsgType(str, Enum):
+class Msg_type(str, Enum):
     NORMAL = "NORMAL"
     SOS = "SOS"
     LKP = "LKP"
@@ -38,7 +38,7 @@ class Transport(str, Enum):
     TCP = "tcp"
     SATELLITE_MOCK = "satellite_mock"
 
-class Message(db.Model):
+class Msg(db.Model):
     __tablename__ = 'messages'
 
     id = db.Column(
@@ -47,7 +47,7 @@ class Message(db.Model):
         default=lambda: str(uuid.uuid4())
     )
     device_id = db.Column(db.String(36), nullable=False)
-    msg_type = db.Column(db.Enum(MsgType), nullable=False, default=MsgType.NORMAL)
+    msg_type = db.Column(db.Enum(Msg_type), nullable=False, default=Msg_type.NORMAL)
     lat = db.Column(db.Numeric(9,6), nullable=False)
     lon = db.Column(db.Numeric(9,6), nullable=False)
     msg = db.Column(db.String(255), nullable=False)
@@ -60,7 +60,7 @@ class Device(db.Model):
     id = db.Column(db.String(36), primary_key=True)
     last_lat = db.Column(db.Numeric(9, 6))
     last_lon = db.Column(db.Numeric(9, 6))
-    last_msg_type = db.Column(db.Enum(MsgType))
+    last_msg_type = db.Column(db.Enum(Msg_type))
     last_seen = db.Column(db.DateTime)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -77,14 +77,14 @@ class Alert(db.Model):
     device_id = db.Column(db.String(36), nullable=False)
     msg_id = db.Column(db.String(36), nullable=False)
 
-    alert_type = db.Column(db.Enum(MsgType), nullable=False)
+    alert_type = db.Column(db.Enum(Msg_type), nullable=False)
     severity = db.Column(db.String(20), nullable=False, default="CRITICAL")
 
     message = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     resolved = db.Column(db.Boolean, default=False, nullable=False)
 
-def upsert_device_from_message(message: Message) -> None:
+def upsert_device_from_msg(message: Msg) -> None:
     """Opret eller opdater Device baseret på en ny besked."""
     device = Device.query.filter_by(id=message.device_id).first()
 
@@ -100,9 +100,9 @@ def upsert_device_from_message(message: Message) -> None:
     device.last_seen = message.timestamp
 
 
-def create_alert_for_message(message: Message) -> None:
+def create_alert_msg(message: Msg) -> None:
     """Opret alert for SOS-beskeder. LKP/NORMAL giver ingen alert."""
-    if message.msg_type != MsgType.SOS:
+    if message.msg_type != Msg_type.SOS:
         return  # kun SOS er en kritisk alarm
 
     alert = Alert(
@@ -126,7 +126,7 @@ def health_check():
 
 # POST: Modtag data fra Iridium-serveren
 @app.route("/messages", methods=["POST"])
-def create_message():
+def create_msg():
     data = request.get_json(force=True)
 
     device_id = data.get("device_id")
@@ -136,7 +136,7 @@ def create_message():
     # msg_type: NORMAL, SOS, LKP
     raw_msg_type = data.get("msg_type", "NORMAL")
     try:
-        msg_type = MsgType(raw_msg_type)
+        msg_type = Msg_type(raw_msg_type)
     except ValueError:
         return jsonify({"error": f"invalid msg_type '{raw_msg_type}'"}), 400
 
@@ -157,7 +157,7 @@ def create_message():
         return jsonify({"error": f"invalid transport '{raw_transport}'"}), 400
 
     # opret besked
-    message = Message(
+    message = Msg(
         device_id=device_id,
         msg_type=msg_type,
         lat=lat,
@@ -170,8 +170,8 @@ def create_message():
     db.session.flush()  # giver message.id uden commit endnu
 
     # opdater Device og lav evt. SOS-alert
-    upsert_device_from_message(message)
-    create_alert_for_message(message)
+    upsert_device_from_msg(message)
+    create_alert_msg(message)
 
     db.session.commit()
 
@@ -179,8 +179,8 @@ def create_message():
 
 # GET: Hent alle beskeder
 @app.route("/api/messages", methods=["GET"])
-def get_all_messages():
-    rows = Message.query.all()
+def get_all_msgs():
+    rows = Msg.query.all()
     data = [
         {
             "id": m.id,

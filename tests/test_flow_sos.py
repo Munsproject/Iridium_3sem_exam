@@ -1,4 +1,4 @@
-def test_flow_sos_creates_alert_and_device_update(client):
+def test_flow_sos_creates_alert_and_update(client):
     lat = 55.123456
     lon = 12.654321
 

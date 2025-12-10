@@ -1,6 +1,6 @@
 from math import sin, cos
 
-class GpsMock:
+class gps_mock:
     def __init__(self):
         self.i = 0
 
@@ -9,8 +9,8 @@ class GpsMock:
         return 55.0 + sin(self.i)/10000, 12.0 + cos(self.i)/10000
 
 
-def test_gps_mock_moves():
-    gps = GpsMock()
+def test_gps_mock_move():
+    gps = gps_mock()
     p1 = gps.get_position()
     p2 = gps.get_position()
 

@@ -1,10 +1,10 @@
-def test_create_message_sos(client):
+def test_create_msg_sos(client):
     payload = {
-        "device_id": "TEST123",
+        "device_id": "TEST001",
         "msg_type": "SOS",
         "lat": 55.000001,
         "lon": 12.000001,
-        "msg": "SOS triggered",
+        "msg": "SOS signal",
         "transport": "tcp"
     }
 
@@ -25,7 +25,7 @@ def test_create_message_sos(client):
 
 def test_create_invalid_msg_type(client):
     payload = {
-        "device_id": "TEST123",
+        "device_id": "TEST001",
         "msg_type": "INVALID",
         "lat": 55.0,
         "lon": 12.0,

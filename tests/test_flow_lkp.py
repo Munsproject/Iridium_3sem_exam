@@ -1,4 +1,4 @@
-def test_flow_lkp_multiple_points(client):
+def test_flow_lkp(client):
     coords = [
         (55.000001, 12.000001),
         (55.000010, 12.000020),
@@ -7,7 +7,7 @@ def test_flow_lkp_multiple_points(client):
 
     for lat, lon in coords:
         payload = {
-            "device_id": "DEV100",
+            "device_id": "D02",
             "msg_type": "LKP",
             "lat": lat,
             "lon": lon,

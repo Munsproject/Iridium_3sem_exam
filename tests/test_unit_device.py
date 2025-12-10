@@ -1,6 +1,6 @@
 import pytest
-from api.app import db, Device, Message, MsgType, Transport
-from api.app import upsert_device_from_message
+from api.app import db, Device, Msg, Msg_type, Transport
+from api.app import upsert_device_from_msg
 
 @pytest.fixture
 def app_context():
@@ -12,41 +12,41 @@ def app_context():
         yield
 
 def test_upsert_creates_new_device(app_context):
-    msg = Message(
-        device_id="D1",
+    msg = Msg(
+        device_id="D01",
         lat=55,
         lon=12,
         msg="test",
-        msg_type=MsgType.NORMAL,
+        msg_type=Msg_type.NORMAL,
         transport=Transport.TCP
     )
 
-    upsert_device_from_message(msg)
+    upsert_device_from_msg(msg)
     db.session.commit()
 
-    dev = Device.query.get("D1")
+    dev = Device.query.get("D01")
     assert dev is not None
     assert float(dev.last_lat) == 55
     assert float(dev.last_lon) == 12
 
 def test_upsert_updates_existing_device(app_context):
-    d = Device(id="D2")
+    d = Device(id="D02")
     db.session.add(d)
     db.session.commit()
 
-    msg = Message(
-        device_id="D2",
+    msg = Msg(
+        device_id="D02",
         lat=60,
         lon=10,
         msg="test",
-        msg_type=MsgType.LKP,
+        msg_type=Msg_type.LKP,
         transport=Transport.TCP
     )
 
-    upsert_device_from_message(msg)
+    upsert_device_from_msg(msg)
     db.session.commit()
 
-    dev = Device.query.get("D2")
+    dev = Device.query.get("D02")
     assert float(dev.last_lat) == 60
     assert float(dev.last_lon) == 10
-    assert dev.last_msg_type == MsgType.LKP
+    assert dev.last_msg_type == Msg_type.LKP

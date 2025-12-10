@@ -1,6 +1,6 @@
 from datetime import datetime
 
-def build_message(device_id, msg_type, lat, lon, msg):
+def build_msg(device_id, msg_type, lat, lon, msg):
     return {
         "device_id": device_id,
         "msg_type": msg_type,
@@ -12,10 +12,10 @@ def build_message(device_id, msg_type, lat, lon, msg):
     }
 
 
-def test_build_message_contains_all_fields():
-    msg = build_message("D1", "LKP", 55.0, 12.0, "periodic update")
+def test_build_msg_containing_all_fields():
+    msg = build_msg("D01", "LKP", 55.0, 12.0, "periodic update")
 
-    assert msg["device_id"] == "D1"
+    assert msg["device_id"] == "D01"
     assert msg["msg_type"] == "LKP"
     assert msg["lat"] == 55.0
     assert msg["lon"] == 12.0

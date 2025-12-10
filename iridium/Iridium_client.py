@@ -24,7 +24,7 @@ class IridiumSBDClient:
                 crc &= 0xFFFF
         return crc
 
-    def send_sbd_message(self, payload: bytes):
+    def send_sbd_msg(self, payload: bytes):
         """Send a Mobile-Originated (MO) SBD message."""
         print(f"[INFO] Connecting to Iridium Gateway at {self.server_host}:{self.server_port}")
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -73,7 +73,7 @@ class IridiumSBDClient:
             sock.close()
             print("[INFO] Connection closed.")
 
-    def send_emergency_message(self, lat: float, lon: float, text: str = "Emergency"):
+    def send_emergency_msg(self, lat: float, lon: float, text: str = "Emergency"):
         """Send an emergency SBD message with location and text."""
         timestamp = int(time.time())
         payload_dict = {

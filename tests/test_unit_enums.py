@@ -1,14 +1,14 @@
 import pytest
-from api.app import MsgType, Transport
+from api.app import Msg_type, Transport
 
 def test_msgtype_valid():
-    assert MsgType("SOS") == MsgType.SOS
-    assert MsgType("NORMAL") == MsgType.NORMAL
-    assert MsgType("LKP") == MsgType.LKP
+    assert Msg_type("SOS") == Msg_type.SOS
+    assert Msg_type("NORMAL") == Msg_type.NORMAL
+    assert Msg_type("LKP") == Msg_type.LKP
 
 def test_msgtype_invalid():
     with pytest.raises(ValueError):
-        MsgType("XYZ")
+        Msg_type("XYZ")
 
 def test_transport_valid():
     assert Transport("tcp") == Transport.TCP

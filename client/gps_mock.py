@@ -22,14 +22,14 @@ class Narvik:
         """Tænd enheden."""
         self.is_on = True
 
-    def stop_movement(self):
+    def stop_moving(self):
         """
         Stop bevægelse (bruges typisk ved SOS).
         GPS'en kan stadig læses, men positionen ændrer sig ikke længere.
         """
         self.frozen = True
 
-    def _meters_to_deg(self, dx_m, dy_m):
+    def _meters_to_degree(self, dx_m, dy_m):
         """
         Konverter små bevægelser i meter til grader.
         dx_m: øst/vest (meter)
@@ -39,7 +39,7 @@ class Narvik:
         dlon = dx_m / (111_111 * math.cos(math.radians(self.lat)))
         return dlat, dlon
 
-    def _step(self):
+    def _human_step(self):
         """
         Lav ét 'menneskeligt skridt' i tilfældig retning.
         """

@@ -1,8 +1,8 @@
 import time
 from gps_mock import Narvik
-from api_client import send_SOS, send_lkp
+from api_client import send_SOS_signal, send_lkp_signal
 
-def simulate_lkp_every_20min_and_sos(
+def sim_lkp_sos_every_20min(
     lkp_interval_sec=20 * 60,   # 20 minutter i "virkelighed"
     step_delay_sec=2,          # Langsom skridt hatsighed for tests skyld
     sos_after_minutes=60        # hvornår der "sker en ulykke"
@@ -32,7 +32,7 @@ def simulate_lkp_every_20min_and_sos(
         # 2) Send LKP hver lkp_interval_sec
         if now - last_lkp_time >= lkp_interval_sec:
             print("[SIM] LKP-interval nået. Sender LKP")
-            send_lkp(lat, lon, text="Periodisk LKP fra enhed")
+            send_lkp_signal(lat, lon, text="Periodisk LKP fra enhed")
             last_lkp_time = now
 
         # 3) Efter sos_after_minutes, SOS + stop bevægelse
@@ -43,7 +43,7 @@ def simulate_lkp_every_20min_and_sos(
             # Frys den sidste position og send SOS
             lat, lon = gps.get_position()
             print(f"[SIM] SOS position (frosset): {lat:.6f}, {lon:.6f}")
-            send_SOS(lat, lon, text="SOS i Narvik-fjeldene")
+            send_SOS_signal(lat, lon, text="SOS i Narvik-fjeldene")
             break
 
         time.sleep(step_delay_sec)
@@ -57,7 +57,7 @@ def simulate_lkp_every_20min_and_sos(
 
 if __name__ == "__main__":
     print("[SIM] Starter Narvik-simulation med periodisk LKP + SOS\n")
-    simulate_lkp_every_20min_and_sos(
+    sim_lkp_sos_every_20min(
         lkp_interval_sec=20,      # TEST: 20 sek i stedet for 20 min
         step_delay_sec=2,         # ét skridt hvert 2. sekund
         sos_after_minutes=2       # SOS efter ca. 2 minutter

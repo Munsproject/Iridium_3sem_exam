@@ -1,6 +1,6 @@
 import pytest
-from api.app import db, Alert, Message, MsgType, Transport
-from api.app import create_alert_for_message
+from api.app import db, Alert, Msg, Msg_type, Transport
+from api.app import create_alert_msg
 
 @pytest.fixture
 def app_context():
@@ -12,12 +12,12 @@ def app_context():
 
 
 def test_alert_created_for_sos(app_context):
-    msg = Message(
-        device_id="D3",
+    msg = Msg(
+        device_id="D03",
         lat=1,
         lon=1,
-        msg="HELP",
-        msg_type=MsgType.SOS,
+        msg="SOS test",
+        msg_type=Msg_type.SOS,
         transport=Transport.TCP,
     )
 
@@ -26,28 +26,28 @@ def test_alert_created_for_sos(app_context):
     db.session.flush()  
 
     # Opret alert på baggrund af beskeden
-    create_alert_for_message(msg)
+    create_alert_msg(msg)
     db.session.commit()
 
     alerts = Alert.query.all()
     assert len(alerts) == 1
-    assert alerts[0].alert_type == MsgType.SOS
+    assert alerts[0].alert_type == Msg_type.SOS
 
 
 def test_no_alert_for_lkp(app_context):
-    msg = Message(
-        device_id="D4",
+    msg = Msg(
+        device_id="D04",
         lat=1,
         lon=1,
-        msg="test",
-        msg_type=MsgType.LKP,
+        msg="lkp test",
+        msg_type=Msg_type.LKP,
         transport=Transport.TCP,
     )
 
     db.session.add(msg)
     db.session.flush()  
 
-    create_alert_for_message(msg)
+    create_alert_msg(msg)
     db.session.commit()
 
     alerts = Alert.query.all()
